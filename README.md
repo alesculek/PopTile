@@ -11,9 +11,9 @@ Supports multiple monitors, keyboard-driven navigation, window stacking (tab gro
 ### Download (recommended)
 
 1. Download the latest `PopTile-macos-arm64.zip` from [Releases](https://github.com/alesculek/PopTile/releases)
-2. Unzip and place `PopTile` somewhere in your PATH (e.g. `/usr/local/bin/`)
-3. Run `PopTile` — it appears as a status bar icon
-4. Grant Accessibility permission when prompted (System Settings → Privacy & Security → Accessibility)
+2. Unzip `PopTile.app` and move it to `/Applications` or `~/Applications`
+3. Launch PopTile from Spotlight or the Applications folder
+4. Grant Accessibility permission when prompted (System Settings → Privacy & Security → Accessibility) — PopTile will start tiling automatically once permission is granted
 
 ### Build from source
 
@@ -23,7 +23,13 @@ Requires Xcode Command Line Tools (macOS 14+).
 git clone https://github.com/alesculek/PopTile.git
 cd PopTile
 swift build -c release
-cp .build/release/PopTile /usr/local/bin/
+
+# Create app bundle
+mkdir -p PopTile.app/Contents/MacOS PopTile.app/Contents/Resources
+cp .build/release/PopTile PopTile.app/Contents/MacOS/
+cp Sources/PopTile/Resources/Info.plist PopTile.app/Contents/
+codesign --force --deep --sign - PopTile.app
+mv PopTile.app ~/Applications/
 ```
 
 ## Usage
@@ -64,7 +70,7 @@ To revert: `defaults write com.apple.dock autohide -bool false && killall Dock`
 ## Known Limitations
 
 - **Minimum window size** — some apps enforce a minimum size. When many windows tile on a small screen, tiles may be too small and apps will silently ignore the resize.
-- **macOS Accessibility permission** is required. PopTile cannot function without it.
+- **macOS Accessibility permission** is required. PopTile will prompt on first launch and start tiling automatically once granted (no restart needed).
 
 ## Credits
 

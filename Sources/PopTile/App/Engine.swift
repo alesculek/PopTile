@@ -76,18 +76,39 @@ final class Engine {
 
     // MARK: - Initialization
 
+    /// Timer that polls for accessibility permission when not yet granted
+    private var accessibilityPollTimer: Timer?
+
     func start() {
         log(" Starting engine...")
 
-        // Check accessibility permissions
+        // Check accessibility permissions — prompt the user
         let trusted = AXIsProcessTrustedWithOptions(
             [kAXTrustedCheckOptionPrompt.takeUnretainedValue(): true] as CFDictionary
         )
-        if !trusted {
-            log(" WARNING: Accessibility access not granted. Window management will not work.")
-            log(" Please grant access in System Settings > Privacy & Security > Accessibility")
-        }
 
+        if trusted {
+            startEngine()
+        } else {
+            log(" Accessibility access not granted — polling until granted...")
+            startAccessibilityPolling()
+        }
+    }
+
+    private func startAccessibilityPolling() {
+        accessibilityPollTimer?.invalidate()
+        accessibilityPollTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+            guard let self else { return }
+            if AXIsProcessTrusted() {
+                self.accessibilityPollTimer?.invalidate()
+                self.accessibilityPollTimer = nil
+                log(" Accessibility permission granted — starting engine")
+                self.startEngine()
+            }
+        }
+    }
+
+    private func startEngine() {
         // Log monitor layout for diagnostics
         for (idx, screen) in NSScreen.screens.enumerated() {
             let axRect = screenToAXRect(screen)
@@ -121,6 +142,8 @@ final class Engine {
     }
 
     func stop() {
+        accessibilityPollTimer?.invalidate()
+        accessibilityPollTimer = nil
         cancelDrag()
         windowTracker?.stop()
         hotkeyManager.stop()
