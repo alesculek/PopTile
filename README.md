@@ -8,7 +8,13 @@ Supports multiple monitors, keyboard-driven navigation, window stacking (tab gro
 
 ## Installation
 
-### Download (recommended)
+### Homebrew
+
+```bash
+brew install --cask --no-quarantine alesculek/tap/poptile
+```
+
+### Download
 
 1. Download the latest `PopTile-macos-arm64.zip` from [Releases](https://github.com/alesculek/PopTile/releases)
 2. Unzip `PopTile.app` and move it to `/Applications` or `~/Applications`
