@@ -126,6 +126,17 @@ enum KeyCode {
     static let t: UInt16 = 17
     static let tab: UInt16 = 48
     static let b: UInt16 = 11
+    static let r: UInt16 = 15
     static let leftBracket: UInt16 = 33
     static let rightBracket: UInt16 = 30
+}
+
+// MARK: - Test helpers
+
+extension HotkeyManager {
+    /// Check if a binding exists for the given key+modifiers (for testing)
+    func hasBinding(_ keyCode: UInt16, _ modifiers: NSEvent.ModifierFlags) -> Bool {
+        let hotkey = Hotkey(keyCode: keyCode, modifiers: modifiers)
+        return bindings[hotkey] != nil
+    }
 }

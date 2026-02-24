@@ -142,7 +142,7 @@ final class Tiler {
             if let moveTo {
                 switch moveTo {
                 case .window(let target):
-                    moveAuto(engine, focused, target, stackFromLeft: direction == .left)
+                    moveAuto(engine, focused, target, direction: direction, stackFromLeft: direction == .left)
                 case .monitor(let monitorIdx):
                     focused.ignoreDetach = true
                     autoTiler.detachWindow(engine, focused.entity)
@@ -303,7 +303,7 @@ final class Tiler {
     // MARK: - Move auto
 
     func moveAuto(_ engine: Engine, _ focused: TileWindow, _ moveTo: TileWindow,
-                  stackFromLeft: Bool = true) {
+                  direction: Direction, stackFromLeft: Bool = true) {
         guard let at = engine.autoTiler else { return }
 
         // Check if moving onto a stack
@@ -323,10 +323,13 @@ final class Tiler {
                     at.tile(engine, fork, fork.area)
                 }
             } else {
-                let movement: MoveBy = .keyboard(src: focused.rect())
+                // Direction-aware placement (aligned with drag behavior)
+                let orient: Orientation = (direction == .left || direction == .right) ? .horizontal : .vertical
+                let swap = (direction == .left || direction == .up)
+                let movement: MoveBy = .cursor(orientation: orient, swap: swap)
                 focused.ignoreDetach = true
                 at.detachWindow(engine, focused.entity)
-                at.attachToWindow(engine, moveTo, focused, movement, stackFromLeft: false)
+                at.attachToWindow(engine, moveTo, focused, movement, stackFromLeft: stackFromLeft)
             }
         }
     }

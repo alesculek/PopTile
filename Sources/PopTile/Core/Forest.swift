@@ -142,8 +142,6 @@ final class Forest: World {
             }
             fork.right = node
         }
-
-        onAttach(fork.entity, window)
     }
 
     // MARK: - Attach stack
@@ -227,10 +225,8 @@ final class Forest: World {
                 } else {
                     fork.right = rightNode
                     fork.setRatio(fork.length() / 2)
-                    if case .keyboard(let src) = placeBy {
-                        let (l, r) = areaOfHalves(fork)
-                        placeByKeyboard(fork, src: src, left: l, right: r)
-                    }
+                    let (l, r) = areaOfHalves(fork)
+                    place(placeBy, fork, l, r)
                     onAttach(entity, newEntity)
                     return (entity, fork)
                 }
@@ -255,6 +251,8 @@ final class Forest: World {
                     } else {
                         fork.right = rightNode
                         fork.setRatio(fork.length() / 2)
+                        let (l, r) = areaOfHalves(fork)
+                        place(placeBy, fork, l, r)
                         onAttach(entity, newEntity)
                         return (entity, fork)
                     }

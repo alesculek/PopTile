@@ -209,14 +209,12 @@ final class AutoTiler {
     func toggleFloating(_ engine: Engine) {
         guard let focused = engine.focusWindow() else { return }
 
-        let isFloatException = false // TODO: check float exceptions
+        let isFloatException = engine.settings.shouldFloat(bundleId: focused.bundleIdentifier())
 
         if isFloatException {
             if engine.containsTag(focused.entity, Tags.forceTile.rawValue) {
                 engine.deleteTag(focused.entity, Tags.forceTile.rawValue)
-                if let forkEntity = attached.get(focused.entity) {
-                    detachWindow(engine, focused.entity)
-                }
+                detachWindow(engine, focused.entity)
             } else {
                 engine.addTag(focused.entity, Tags.forceTile.rawValue)
                 autoTile(engine, focused, ignoreFocus: false)

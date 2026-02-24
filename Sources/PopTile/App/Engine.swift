@@ -266,7 +266,7 @@ final class Engine {
         }
     }
 
-    private func updateActiveBorder(_ window: TileWindow) {
+    func updateActiveBorder(_ window: TileWindow) {
         guard settings.showActiveWindowBorder else {
             activeBorder.hide()
             return
@@ -883,7 +883,7 @@ final class Engine {
 
     // MARK: - Hotkey setup
 
-    private func setupHotkeys() {
+    func setupHotkeys() {
         let ctrlOpt: NSEvent.ModifierFlags = [.control, .option]
         let ctrlOptShift: NSEvent.ModifierFlags = [.control, .option, .shift]
 
@@ -931,6 +931,9 @@ final class Engine {
         hotkeyManager.register(KeyCode.g, ctrlOpt) { [weak self] in
             guard let self else { return }
             self.autoTiler?.toggleFloating(self)
+            if let win = self.focusWindow() {
+                self.updateActiveBorder(win)
+            }
         }
 
         // Toggle auto-tiling: Ctrl+Option+T
@@ -944,9 +947,38 @@ final class Engine {
             self.tiler.enter(self)
         }
 
+        // Retile all: Ctrl+Option+R
+        hotkeyManager.register(KeyCode.r, ctrlOpt) { [weak self] in
+            self?.retileAll()
+        }
+
         // Toggle active window border: Ctrl+Option+B
         hotkeyManager.register(KeyCode.b, ctrlOpt) { [weak self] in
             self?.toggleActiveWindowBorder()
+        }
+
+        // Exit tiling mode: Ctrl+Option+Escape
+        hotkeyManager.register(KeyCode.escape, ctrlOpt) { [weak self] in
+            guard let self else { return }
+            self.tiler.exit(self)
+        }
+
+        // Move with HJKL: Ctrl+Option+Shift + HJKL
+        hotkeyManager.register(KeyCode.h, ctrlOptShift) { [weak self] in
+            guard let self else { return }
+            self.tiler.moveLeft(self, self.focusWindow()?.entity)
+        }
+        hotkeyManager.register(KeyCode.l, ctrlOptShift) { [weak self] in
+            guard let self else { return }
+            self.tiler.moveRight(self, self.focusWindow()?.entity)
+        }
+        hotkeyManager.register(KeyCode.k, ctrlOptShift) { [weak self] in
+            guard let self else { return }
+            self.tiler.moveUp(self, self.focusWindow()?.entity)
+        }
+        hotkeyManager.register(KeyCode.j, ctrlOptShift) { [weak self] in
+            guard let self else { return }
+            self.tiler.moveDown(self, self.focusWindow()?.entity)
         }
 
         // Resize: Ctrl+Option + [ / ]
@@ -958,5 +990,20 @@ final class Engine {
             guard let self else { return }
             self.tiler.resize(self, .right)
         }
+    }
+}
+
+// MARK: - Test helpers
+
+extension Engine {
+    /// Whether the active window border overlay is currently visible (for testing)
+    var isActiveBorderVisible: Bool {
+        activeBorder.visible
+    }
+
+    /// Force the active border to show at a given rect (for testing)
+    func showActiveBorderForTesting(rect: Rect) {
+        activeBorder.update(rect: rect, color: settings.hintColor)
+        activeBorder.show()
     }
 }

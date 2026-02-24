@@ -60,6 +60,10 @@ final class TileWindow {
         return true
     }
 
+    func bundleIdentifier() -> String? {
+        NSRunningApplication(processIdentifier: axWindow.pid)?.bundleIdentifier
+    }
+
     func activate(_ warpPointer: Bool) {
         // Activate the owning app
         if let app = NSRunningApplication(processIdentifier: axWindow.pid) {
