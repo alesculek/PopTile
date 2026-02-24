@@ -1,8 +1,10 @@
 # PopTile
 
-Auto-tiling window manager for macOS, inspired by [Pop!_OS](https://pop.system76.com/) pop-shell.
+Auto-tiling window manager for macOS, ported from [pop-shell](https://github.com/pop-os/shell) by [System76](https://system76.com/).
 
-Tiles windows automatically using binary space partitioning. Supports multiple monitors, keyboard-driven navigation, window stacking (tab groups), and configurable gaps.
+The tiling algorithm (binary space partitioning, fork trees, stacking) is a Swift port of pop-shell's TypeScript implementation. PopTile adapts it for macOS using the Accessibility API (AXUIElement) instead of GNOME's Mutter.
+
+Supports multiple monitors, keyboard-driven navigation, window stacking (tab groups), and configurable gaps.
 
 ## Installation
 
@@ -54,6 +56,12 @@ PopTile runs as a menu bar app. Click the grid icon for controls:
 - **Minimum window size** — some apps enforce a minimum size. When many windows tile on a small screen, tiles may be too small and apps will silently ignore the resize.
 - **macOS Accessibility permission** is required. PopTile cannot function without it.
 
+## Credits
+
+PopTile is a macOS port of [pop-shell](https://github.com/pop-os/shell), the auto-tiling window manager extension for GNOME, created by [System76](https://system76.com/) and contributors. The core tiling logic (forest, forks, stacking, auto-tiler) is derived from their work.
+
 ## License
 
-MIT
+GPL-3.0 — see [LICENSE](LICENSE).
+
+This project is a derivative work of [pop-shell](https://github.com/pop-os/shell), which is licensed under the GNU General Public License v3.0.
