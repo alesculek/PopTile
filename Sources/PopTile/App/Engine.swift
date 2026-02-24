@@ -523,13 +523,31 @@ final class Engine {
         var hintRect: Rect
         var hintSide: Side = .center
 
+        // Edge margin: when cursor is within this distance of the monitor edge,
+        // prefer splitting over stacking (prevents accidental stacking near edges)
+        let edgeMargin = 100
+        let nearLeft = cursorX - workArea.x < edgeMargin
+        let nearRight = (workArea.x + workArea.width) - cursorX < edgeMargin
+        let nearTop = cursorY - workArea.y < edgeMargin
+        let nearBottom = (workArea.y + workArea.height) - cursorY < edgeMargin
+        let nearEdge = nearLeft || nearRight || nearTop || nearBottom
+
         if let targetWindow, let targetEntity {
             let tr = targetWindow.rect()
 
-            // Pop-shell uses Euclidean distance to cardinal points + center
             let cursor = (cursorX, cursorY)
-            let (_, side) = nearestSide(origin: cursor, rect: tr,
-                                        stackingWithMouse: settings.stackingWithMouse)
+            // Disable stacking when cursor is near screen edge
+            let allowStacking = settings.stackingWithMouse && !nearEdge
+            var (_, side) = nearestSide(origin: cursor, rect: tr,
+                                        stackingWithMouse: allowStacking)
+
+            // Near screen edge, override side to match the edge direction
+            if nearEdge && side == .center {
+                if nearLeft { side = .left }
+                else if nearRight { side = .right }
+                else if nearTop { side = .top }
+                else { side = .bottom }
+            }
 
             hintSide = side
 
@@ -543,7 +561,6 @@ final class Engine {
             case .bottom:
                 hintRect = Rect(x: tr.x, y: tr.y + tr.height / 2, width: tr.width, height: tr.height / 2)
             case .center:
-                // Stack/group — show full target area
                 hintRect = tr
             }
 
@@ -551,20 +568,32 @@ final class Engine {
             dragState?.hintSide = hintSide
             dragState?.dropMonitor = cursorMonitor
         } else {
-            // No target window — suggest monitor placement
+            // No target window — suggest monitor placement (wider edge zones)
             let relX = Double(cursorX - workArea.x) / Double(max(1, workArea.width))
+            let relY = Double(cursorY - workArea.y) / Double(max(1, workArea.height))
 
-            if relX < 0.15 {
+            if relX < 0.25 {
                 hintRect = Rect(x: workArea.x + gapOuter, y: workArea.y + gapOuter,
                                width: workArea.width / 2 - gapOuter - gapInnerHalf,
                                height: workArea.height - gapOuter * 2)
                 hintSide = .left
-            } else if relX > 0.85 {
+            } else if relX > 0.75 {
                 let hw = workArea.width / 2
                 hintRect = Rect(x: workArea.x + hw + gapInnerHalf, y: workArea.y + gapOuter,
                                width: hw - gapOuter - gapInnerHalf,
                                height: workArea.height - gapOuter * 2)
                 hintSide = .right
+            } else if relY < 0.25 {
+                hintRect = Rect(x: workArea.x + gapOuter, y: workArea.y + gapOuter,
+                               width: workArea.width - gapOuter * 2,
+                               height: workArea.height / 2 - gapOuter - gapInnerHalf)
+                hintSide = .top
+            } else if relY > 0.75 {
+                let hh = workArea.height / 2
+                hintRect = Rect(x: workArea.x + gapOuter, y: workArea.y + hh + gapInnerHalf,
+                               width: workArea.width - gapOuter * 2,
+                               height: hh - gapOuter - gapInnerHalf)
+                hintSide = .bottom
             } else {
                 hintRect = Rect(x: workArea.x + gapOuter, y: workArea.y + gapOuter,
                                width: workArea.width - gapOuter * 2,
