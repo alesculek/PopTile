@@ -96,10 +96,6 @@ final class StackTabBar {
             height: Int(tabsHeight)
         ))
         tabWindow.setFrame(screenRect, display: true)
-
-        if let stackView, let contentView = tabWindow.contentView {
-            stackView.frame = contentView.bounds
-        }
     }
 
     func setVisible(_ visible: Bool) {
@@ -135,6 +131,8 @@ final class StackTabBar {
         }
 
         button.layer?.cornerRadius = 4
+        button.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        button.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
         // Set image if available
         if let icon {
@@ -187,12 +185,20 @@ final class StackTabBar {
         window.level = .normal
         window.collectionBehavior = [.canJoinAllSpaces, .stationary]
 
-        let sv = NSStackView(frame: window.contentView!.bounds)
+        let sv = NSStackView()
         sv.orientation = .horizontal
         sv.distribution = .fillEqually
         sv.spacing = 1
-        sv.autoresizingMask = [.width, .height]
+        sv.translatesAutoresizingMaskIntoConstraints = false
         window.contentView?.addSubview(sv)
+        if let contentView = window.contentView {
+            NSLayoutConstraint.activate([
+                sv.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+                sv.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+                sv.topAnchor.constraint(equalTo: contentView.topAnchor),
+                sv.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
+            ])
+        }
 
         tabWindow = window
         stackView = sv

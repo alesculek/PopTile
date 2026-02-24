@@ -179,6 +179,10 @@ final class WindowTracker {
     private func discoverWindows(for app: NSRunningApplication) {
         let pid = app.processIdentifier
         let windows = AXWindow.windowsForApp(pid)
+        if windows.isEmpty {
+            let name = app.localizedName ?? app.bundleIdentifier ?? "\(pid)"
+            log(" No AX windows for \(name) (pid \(pid)) — app may not expose accessibility")
+        }
         for axWin in windows {
             engine?.onWindowCreated(axWin)
         }
