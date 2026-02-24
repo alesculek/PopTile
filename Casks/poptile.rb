@@ -15,7 +15,7 @@ cask "poptile" do
   postflight do
     # Remove quarantine so the ad-hoc signed app can launch without Gatekeeper prompt
     system_command "/usr/bin/xattr",
-                   args: ["-d", "com.apple.quarantine", "#{appdir}/PopTile.app"],
+                   args: ["-cr", "#{appdir}/PopTile.app"],
                    sudo: false
   end
 

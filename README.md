@@ -11,7 +11,7 @@ Supports multiple monitors, keyboard-driven navigation, window stacking (tab gro
 ### Homebrew
 
 ```bash
-brew install --cask --no-quarantine alesculek/tap/poptile
+brew install --cask alesculek/tap/poptile
 ```
 
 ### Download
