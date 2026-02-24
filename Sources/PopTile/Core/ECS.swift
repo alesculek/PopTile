@@ -107,7 +107,7 @@ class World {
     private var entities_: [Entity] = []
     private var storages: [AnyStorage] = []
     private var tags_: [Set<Int>] = []
-    private var freeSlots: [Int] = []
+    private var freeSlots: Set<Int> = []
 
     var capacity: Int { entities_.count }
     var freeCount: Int { freeSlots.count }
@@ -125,7 +125,8 @@ class World {
     }
 
     func createEntity() -> Entity {
-        if let slot = freeSlots.popLast() {
+        if let slot = freeSlots.first {
+            freeSlots.remove(slot)
             let old = entities_[slot]
             let entity = Entity(index: old.index, generation: old.generation + 1)
             entities_[slot] = entity
@@ -139,13 +140,17 @@ class World {
     }
 
     func deleteEntity(_ entity: Entity) {
+        // Guard against double-delete: only proceed if the slot is not already free
+        guard entity.index < entities_.count,
+              !freeSlots.contains(entity.index) else { return }
+
         if entity.index < tags_.count {
             tags_[entity.index].removeAll()
         }
         for storage in storages {
             storage.removeAny(entity)
         }
-        freeSlots.append(entity.index)
+        freeSlots.insert(entity.index)
     }
 
     func addTag(_ entity: Entity, _ tag: Int) {

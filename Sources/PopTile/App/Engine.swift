@@ -42,7 +42,11 @@ final class Engine {
     var overlayRect: Rect = .zero
     private var previousFocus: Entity? = nil
     private var currentFocus: Entity? = nil
-    private var entityCounter: Int = 0
+    /// Window entity counter starts at 100_000 to avoid index collisions with
+    /// Forest's fork entities (which use World's sequential 0,1,2... indices).
+    /// This prevents Forest.deleteEntity from corrupting the `attached` storage
+    /// when a fork entity's index coincides with a window entity's index.
+    private var entityCounter: Int = 100_000
 
     /// Window identity map using CFEqual-based keys (NOT ObjectIdentifier)
     private var axToEntity: [AXElementKey: Entity] = [:]

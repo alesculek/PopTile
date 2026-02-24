@@ -307,8 +307,7 @@ final class Tiler {
         guard let at = engine.autoTiler else { return }
 
         // Check if moving onto a stack
-        if let stackInfo = at.findStack(moveTo.entity) {
-            let (stackFork, _) = (stackInfo.0, stackInfo.1)
+        if at.findStack(moveTo.entity) != nil {
             focused.ignoreDetach = true
             at.detachWindow(engine, focused.entity)
             at.attachToWindow(engine, moveTo, focused, .auto, stackFromLeft: stackFromLeft)
@@ -335,19 +334,21 @@ final class Tiler {
     // MARK: - Resize
 
     func resize(_ engine: Engine, _ direction: Direction) {
-        guard let windowEntity = window else { return }
+        // Fall back to focused window when not in tiling mode
+        guard let windowEntity = window ?? engine.focusWindow()?.entity else { return }
         resizingWindow = true
 
-        if let autoTiler = engine.autoTiler,
+        if engine.autoTiler != nil,
            !engine.containsTag(windowEntity, Tags.floating.rawValue) {
-            resizeAuto(engine, direction)
+            resizeAuto(engine, direction, windowEntity)
         }
 
         resizingWindow = false
     }
 
-    private func resizeAuto(_ engine: Engine, _ direction: Direction) {
-        guard let autoTiler = engine.autoTiler, let windowEntity = window else { return }
+    private func resizeAuto(_ engine: Engine, _ direction: Direction, _ windowEntity: Entity? = nil) {
+        guard let autoTiler = engine.autoTiler,
+              let windowEntity = windowEntity ?? window else { return }
         guard let entity = autoTiler.attached.get(windowEntity),
               let fork = autoTiler.forest.forks.get(entity),
               let win = engine.windows.get(windowEntity) else { return }
@@ -385,7 +386,7 @@ final class Tiler {
 
         for mov in [mov1, mov2] {
             crect.apply(mov)
-            var before = crect.clone()
+            let before = crect.clone()
             crect.clamp(toparea)
             let d = before.diff(crect)
             crect.apply(Rect(x: 0, y: 0, width: -d.x, height: -d.y))

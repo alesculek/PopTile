@@ -8,12 +8,12 @@ final class Settings {
     // MARK: - Gap settings (pixels)
 
     var gapOuter: Int {
-        get { defaults.integer(forKey: "gapOuter").nonZeroOr(4) }
+        get { defaults.object(forKey: "gapOuter") as? Int ?? 4 }
         set { defaults.set(newValue, forKey: "gapOuter") }
     }
 
     var gapInner: Int {
-        get { defaults.integer(forKey: "gapInner").nonZeroOr(4) }
+        get { defaults.object(forKey: "gapInner") as? Int ?? 4 }
         set { defaults.set(newValue, forKey: "gapInner") }
     }
 

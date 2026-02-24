@@ -292,7 +292,10 @@ final class Forest: World {
         } else if fork.left.isInStack(window) {
             reflowFork = (forkEntity, fork)
             stackDetach = true
-            removeFromStack(engine, fork.left.stackData!, window) {
+            // Save reference to the left stack data BEFORE removeFromStack,
+            // because onLast may reassign fork.left to the old right branch.
+            let leftStackData = fork.left.stackData!
+            removeFromStack(engine, leftStackData, window) {
                 if let right = fork.right {
                     fork.left = right
                     fork.right = nil
@@ -305,10 +308,10 @@ final class Forest: World {
                     self.deleteEntity(fork.entity)
                 }
             }
-            // Auto-unstack: if only 1 window remains in the stack, convert back to plain window
-            if let data = fork.left.stackData, data.entities.count == 1 {
-                let remaining = data.entities[0]
-                stacks.remove(data.idx)?.destroy()
+            // Auto-unstack: use the saved reference (not fork.left which may have been reassigned)
+            if leftStackData.entities.count == 1 {
+                let remaining = leftStackData.entities[0]
+                stacks.remove(leftStackData.idx)?.destroy()
                 engine.windows.with(remaining) { w in (w as TileWindow).stack = nil }
                 fork.left = .window(remaining)
             }
@@ -652,7 +655,7 @@ final class Forest: World {
             stacks.remove(stack.idx)?.destroy()
             onLast()
         } else {
-            if let s = stacks.get(stack.idx) {
+            if stacks.get(stack.idx) != nil {
                 stackRemove(self, stack, window)
             }
         }

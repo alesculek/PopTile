@@ -107,6 +107,9 @@ final class AutoTiler {
 
     func attachToWindow(_ engine: Engine, _ attachee: TileWindow, _ attacher: TileWindow,
                         _ moveBy: MoveBy, stackFromLeft: Bool = true) -> Bool {
+        // Check monitor mapping exists before modifying the tree
+        guard engine.monitors.contains(attachee.entity) else { return false }
+
         guard let attached = forest.attachWindow(engine, ontoEntity: attachee.entity,
                                                   newEntity: attacher.entity,
                                                   placeBy: moveBy, stackFromLeft: stackFromLeft) else {
@@ -114,20 +117,17 @@ final class AutoTiler {
         }
 
         let (_, fork) = attached
-        if let monitor = engine.monitors.get(attachee.entity) {
-            if fork.isToplevel && fork.smartGapped && fork.right != nil {
-                fork.smartGapped = false
-                var rect = engine.monitorWorkArea(fork.monitor)
-                rect.x += engine.gapOuter
-                rect.y += engine.gapOuter
-                rect.width -= engine.gapOuter * 2
-                rect.height -= engine.gapOuter * 2
-                fork.setArea(rect)
-            }
-            tile(engine, fork, fork.area.clone())
-            return true
+        if fork.isToplevel && fork.smartGapped && fork.right != nil {
+            fork.smartGapped = false
+            var rect = engine.monitorWorkArea(fork.monitor)
+            rect.x += engine.gapOuter
+            rect.y += engine.gapOuter
+            rect.width -= engine.gapOuter * 2
+            rect.height -= engine.gapOuter * 2
+            fork.setArea(rect)
         }
-        return false
+        tile(engine, fork, fork.area.clone())
+        return true
     }
 
     func attachToWorkspace(_ engine: Engine, _ win: TileWindow, _ id: (Int, Int)) {

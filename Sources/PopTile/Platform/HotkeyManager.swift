@@ -32,8 +32,16 @@ final class HotkeyManager {
         let eventMask: CGEventMask = (1 << CGEventType.keyDown.rawValue)
 
         let callback: CGEventTapCallBack = { proxy, type, event, refcon -> Unmanaged<CGEvent>? in
-            guard let refcon else { return Unmanaged.passRetained(event) }
+            guard let refcon else { return Unmanaged.passUnretained(event) }
             let manager = Unmanaged<HotkeyManager>.fromOpaque(refcon).takeUnretainedValue()
+
+            // Handle tap being disabled by system timeout
+            if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
+                if let tap = manager.eventTap {
+                    CGEvent.tapEnable(tap: tap, enable: true)
+                }
+                return Unmanaged.passUnretained(event)
+            }
 
             if type == .keyDown {
                 let keyCode = UInt16(event.getIntegerValueField(.keyboardEventKeycode))
@@ -53,14 +61,7 @@ final class HotkeyManager {
                 }
             }
 
-            // Handle tap being disabled by system timeout
-            if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
-                if let tap = manager.eventTap {
-                    CGEvent.tapEnable(tap: tap, enable: true)
-                }
-            }
-
-            return Unmanaged.passRetained(event)
+            return Unmanaged.passUnretained(event)
         }
 
         let refcon = Unmanaged.passUnretained(self).toOpaque()

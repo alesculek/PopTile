@@ -92,13 +92,10 @@ final class AXWindow {
     }
 
     func isResizable() -> Bool {
-        var value: AnyObject?
-        let result = AXUIElementCopyAttributeValue(element, "AXGrowArea" as CFString, &value)
-        // Also check for standard resize indicator
-        var actions: CFArray?
-        AXUIElementCopyActionNames(element, &actions)
-        // Most windows are resizable unless they explicitly prevent it
-        return true
+        var settable: DarwinBoolean = false
+        let result = AXUIElementIsAttributeSettable(element, kAXSizeAttribute as CFString, &settable)
+        guard result == .success else { return true } // Assume resizable if we can't check
+        return settable.boolValue
     }
 
     func isSheet() -> Bool {

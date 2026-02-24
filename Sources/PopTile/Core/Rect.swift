@@ -63,11 +63,11 @@ struct Rect: Equatable, CustomStringConvertible {
 
         let tendX = x + width
         let oendX = other.x + other.width
-        if tendX > oendX { width = oendX - x }
+        if tendX > oendX { width = max(0, oendX - x) }
 
         let tendY = y + height
         let oendY = other.y + other.height
-        if tendY > oendY { height = oendY - y }
+        if tendY > oendY { height = max(0, oendY - y) }
     }
 
     func contains(_ other: Rect) -> Bool {
