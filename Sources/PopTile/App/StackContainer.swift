@@ -14,6 +14,7 @@ final class StackContainer {
     var monitor: Int
     var workspace: Int
     var tabsHeight: Int
+    var stackData: StackData?
 
     private var tabBar: StackTabBar
     private var tabEntities: [Entity] = []
@@ -28,6 +29,9 @@ final class StackContainer {
         self.tabBar.tabsHeight = CGFloat(tabsHeight)
         self.tabBar.setup { [weak self] entity in
             self?.onTabClicked(entity)
+        }
+        self.tabBar.onReorder = { [weak self] from, to in
+            self?.reorderTab(from: from, to: to)
         }
     }
 
@@ -164,6 +168,42 @@ final class StackContainer {
     func refreshTitles() {
         rebuildTabBar()
     }
+
+    // MARK: - Reorder
+
+    /// Move tab from one position to another, updating activeId and syncing to StackData.
+    func reorderTab(from: Int, to: Int) {
+        guard from != to,
+              from >= 0, from < tabEntities.count,
+              to >= 0, to < tabEntities.count else { return }
+
+        let entity = tabEntities.remove(at: from)
+        tabEntities.insert(entity, at: to)
+
+        // Keep activeId pointing to the same entity
+        if activeId == from {
+            activeId = to
+        } else if from < activeId && to >= activeId {
+            activeId -= 1
+        } else if from > activeId && to <= activeId {
+            activeId += 1
+        }
+
+        // Sync to the backing StackData so the tree stays consistent
+        stackData?.reorder(from: from, to: to)
+
+        rebuildTabBar()
+    }
+
+    // MARK: - Test helpers
+
+    /// Add an entity directly (for testing without TileWindow)
+    func testAddEntity(_ entity: Entity) {
+        tabEntities.append(entity)
+    }
+
+    /// Read-only access to tab entities (for test assertions)
+    var testTabEntities: [Entity] { tabEntities }
 
     // MARK: - Private
 

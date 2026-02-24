@@ -350,6 +350,7 @@ final class AutoTiler {
         guard let rect = stack.rect, let container = forest.stacks.get(stack.idx) else { return }
 
         container.clear()
+        container.stackData = stack
 
         for entity in stack.entities {
             if let window = engine.windows.get(entity) {

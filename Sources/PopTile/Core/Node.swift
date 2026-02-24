@@ -14,6 +14,15 @@ final class StackData {
         self.entities = entities
         self.rect = rect
     }
+
+    /// Move entity at `from` to position `to`, shifting others accordingly.
+    func reorder(from: Int, to: Int) {
+        guard from != to,
+              from >= 0, from < entities.count,
+              to >= 0, to < entities.count else { return }
+        let entity = entities.remove(at: from)
+        entities.insert(entity, at: to)
+    }
 }
 
 /// A tiling node may refer to a fork, a window, or a stack

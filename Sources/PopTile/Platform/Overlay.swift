@@ -3,6 +3,12 @@
 
 import AppKit
 
+// MARK: - Custom pasteboard type for tab reordering
+
+extension NSPasteboard.PasteboardType {
+    static let tabReorder = NSPasteboard.PasteboardType("com.poptile.tab-reorder")
+}
+
 // MARK: - Tiling Overlay (active window hint / resize preview)
 
 final class TilingOverlay {
@@ -70,15 +76,108 @@ final class TilingOverlay {
     }
 }
 
+// MARK: - Draggable Tab Button
+
+/// NSButton subclass that supports drag-to-reorder within the tab bar.
+final class DraggableTabButton: NSButton, NSDraggingSource {
+    var tabIndex: Int = 0
+    private var mouseDownPoint: NSPoint = .zero
+    private var isDragging = false
+
+    func draggingSession(
+        _ session: NSDraggingSession,
+        sourceOperationMaskFor context: NSDraggingContext
+    ) -> NSDragOperation {
+        .move
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        mouseDownPoint = convert(event.locationInWindow, from: nil)
+        isDragging = false
+    }
+
+    override func mouseDragged(with event: NSEvent) {
+        guard !isDragging else { return }
+        let current = convert(event.locationInWindow, from: nil)
+        let dx = abs(current.x - mouseDownPoint.x)
+        guard dx > 5 else { return }
+        isDragging = true
+
+        let pb = NSPasteboardItem()
+        pb.setString("\(tabIndex)", forType: .tabReorder)
+
+        let dragItem = NSDraggingItem(pasteboardWriter: pb)
+        // Create drag image from button appearance
+        let image = NSImage(size: bounds.size)
+        image.lockFocus()
+        if let ctx = NSGraphicsContext.current?.cgContext {
+            layer?.render(in: ctx)
+        }
+        image.unlockFocus()
+        dragItem.setDraggingFrame(bounds, contents: image)
+
+        beginDraggingSession(with: [dragItem], event: event, source: self)
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        if !isDragging {
+            sendAction(action, to: target)
+        }
+        isDragging = false
+    }
+}
+
+// MARK: - Tab Bar Drop Target View
+
+/// Content view for the tab bar window that accepts tab reorder drops.
+final class TabBarDropView: NSView {
+    var onReorder: ((Int, Int) -> Void)?
+    var tabCount: Int = 0
+
+    override init(frame: NSRect) {
+        super.init(frame: frame)
+        registerForDraggedTypes([.tabReorder])
+    }
+
+    required init?(coder: NSCoder) { nil }
+
+    override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
+        .move
+    }
+
+    override func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation {
+        .move
+    }
+
+    override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
+        guard let pb = sender.draggingPasteboard.pasteboardItems?.first,
+              let str = pb.string(forType: .tabReorder),
+              let sourceIdx = Int(str) else { return false }
+
+        let dropPoint = convert(sender.draggingLocation, from: nil)
+        guard tabCount > 0 else { return false }
+        let tabWidth = bounds.width / CGFloat(tabCount)
+        let targetIdx = min(tabCount - 1, max(0, Int(dropPoint.x / tabWidth)))
+
+        if sourceIdx != targetIdx {
+            onReorder?(sourceIdx, targetIdx)
+        }
+        return true
+    }
+}
+
 // MARK: - Stack Tab Bar
 
 final class StackTabBar {
     private var tabWindow: NSWindow?
+    private var dropView: TabBarDropView?
     private var stackView: NSStackView?
-    private var tabs: [Entity: NSButton] = [:]
+    private var tabs: [Entity: DraggableTabButton] = [:]
+    private var tabOrder: [Entity] = []
     var active: Entity?
     var activeId: Int = 0
     private var onTabClicked: ((Entity) -> Void)?
+    var onReorder: ((Int, Int) -> Void)?
 
     var tabsHeight: CGFloat = 24.0
 
@@ -109,12 +208,15 @@ final class StackTabBar {
     func clear() {
         stackView?.arrangedSubviews.forEach { $0.removeFromSuperview() }
         tabs.removeAll()
+        tabOrder.removeAll()
+        dropView?.tabCount = 0
     }
 
     func addTab(entity: Entity, title: String, icon: NSImage?, isActive: Bool, color: NSColor) {
         guard let stackView else { return }
 
-        let button = NSButton(frame: .zero)
+        let button = DraggableTabButton(frame: .zero)
+        button.tabIndex = tabOrder.count
         button.isBordered = false
         button.wantsLayer = true
         // Truncate long titles to keep tabs compact
@@ -151,10 +253,11 @@ final class StackTabBar {
 
         stackView.addArrangedSubview(button)
         tabs[entity] = button
+        tabOrder.append(entity)
+        dropView?.tabCount = tabOrder.count
     }
 
     @objc private func tabClicked(_ sender: NSButton) {
-        // Find entity by tag
         for (entity, button) in tabs {
             if button === sender {
                 onTabClicked?(entity)
@@ -166,8 +269,10 @@ final class StackTabBar {
     func destroy() {
         tabWindow?.orderOut(nil)
         tabWindow = nil
+        dropView = nil
         stackView = nil
         tabs.removeAll()
+        tabOrder.removeAll()
     }
 
     private func createTabWindow() {
@@ -185,22 +290,28 @@ final class StackTabBar {
         window.level = .normal
         window.collectionBehavior = [.canJoinAllSpaces, .stationary]
 
+        // Use TabBarDropView as the content view for drag-and-drop reordering
+        let dv = TabBarDropView(frame: NSRect(x: 0, y: 0, width: 200, height: tabsHeight))
+        dv.onReorder = { [weak self] from, to in
+            self?.onReorder?(from, to)
+        }
+        window.contentView = dv
+
         let sv = NSStackView()
         sv.orientation = .horizontal
         sv.distribution = .fillEqually
         sv.spacing = 1
         sv.translatesAutoresizingMaskIntoConstraints = false
-        window.contentView?.addSubview(sv)
-        if let contentView = window.contentView {
-            NSLayoutConstraint.activate([
-                sv.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-                sv.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-                sv.topAnchor.constraint(equalTo: contentView.topAnchor),
-                sv.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
-            ])
-        }
+        dv.addSubview(sv)
+        NSLayoutConstraint.activate([
+            sv.leadingAnchor.constraint(equalTo: dv.leadingAnchor),
+            sv.trailingAnchor.constraint(equalTo: dv.trailingAnchor),
+            sv.topAnchor.constraint(equalTo: dv.topAnchor),
+            sv.bottomAnchor.constraint(equalTo: dv.bottomAnchor),
+        ])
 
         tabWindow = window
+        dropView = dv
         stackView = sv
     }
 
