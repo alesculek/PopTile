@@ -447,6 +447,13 @@ final class Engine {
                abs(current.height - expected.height) <= tolerance {
                 return  // Window is still where we placed it — not a user drag
             }
+            // If the size changed, this is a resize (user dragging an edge),
+            // not a move — let onWindowResized handle it instead of starting a drag.
+            if abs(current.width - expected.width) > tolerance ||
+               abs(current.height - expected.height) > tolerance {
+                tileWin.expectedRect = current
+                return
+            }
             // Update expectedRect to current position so resize detection still has
             // a reference rect (setting to nil caused resize to silently fail because
             // fromRect would equal newRect → calculateMovement returns .none)

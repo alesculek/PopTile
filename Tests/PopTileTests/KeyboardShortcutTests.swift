@@ -936,3 +936,105 @@ final class KeyboardDragParityTests: XCTestCase {
         }
     }
 }
+
+// MARK: - Resize should not trigger drag (re-tile)
+
+final class ResizeNotDragTests: XCTestCase {
+
+    /// Simulates the onWindowMoved guard: when size changes beyond tolerance,
+    /// the event is a resize (not a drag) and should be skipped.
+    private func isSizeChange(expected: Rect, current: Rect, tolerance: Int = 10) -> Bool {
+        abs(current.width - expected.width) > tolerance ||
+        abs(current.height - expected.height) > tolerance
+    }
+
+    /// Simulates the onWindowMoved guard: when position AND size are within
+    /// tolerance, the window hasn't moved — skip.
+    private func isWithinTolerance(expected: Rect, current: Rect, tolerance: Int = 10) -> Bool {
+        abs(current.x - expected.x) <= tolerance &&
+        abs(current.y - expected.y) <= tolerance &&
+        abs(current.width - expected.width) <= tolerance &&
+        abs(current.height - expected.height) <= tolerance
+    }
+
+    func testHeightResizeFromBottomIsNotDrag() {
+        let expected = Rect(x: 100, y: 100, width: 800, height: 600)
+        // User drags bottom edge down: y unchanged, height grows
+        let current = Rect(x: 100, y: 100, width: 800, height: 700)
+
+        XCTAssertFalse(isWithinTolerance(expected: expected, current: current),
+                       "Height change should fail the tolerance check")
+        XCTAssertTrue(isSizeChange(expected: expected, current: current),
+                      "Height change must be detected as a size change, not a drag")
+    }
+
+    func testHeightResizeFromTopIsNotDrag() {
+        let expected = Rect(x: 100, y: 100, width: 800, height: 600)
+        // User drags top edge up: y decreases, height grows
+        let current = Rect(x: 100, y: 50, width: 800, height: 650)
+
+        XCTAssertFalse(isWithinTolerance(expected: expected, current: current))
+        XCTAssertTrue(isSizeChange(expected: expected, current: current),
+                      "Top-edge resize must be detected as size change, not drag")
+    }
+
+    func testWidthResizeFromRightIsNotDrag() {
+        let expected = Rect(x: 100, y: 100, width: 800, height: 600)
+        // User drags right edge: width grows
+        let current = Rect(x: 100, y: 100, width: 900, height: 600)
+
+        XCTAssertFalse(isWithinTolerance(expected: expected, current: current))
+        XCTAssertTrue(isSizeChange(expected: expected, current: current),
+                      "Width change must be detected as size change, not drag")
+    }
+
+    func testWidthResizeFromLeftIsNotDrag() {
+        let expected = Rect(x: 100, y: 100, width: 800, height: 600)
+        // User drags left edge: x decreases, width grows
+        let current = Rect(x: 50, y: 100, width: 850, height: 600)
+
+        XCTAssertFalse(isWithinTolerance(expected: expected, current: current))
+        XCTAssertTrue(isSizeChange(expected: expected, current: current),
+                      "Left-edge resize must be detected as size change, not drag")
+    }
+
+    func testPurePositionMoveIsNotSizeChange() {
+        let expected = Rect(x: 100, y: 100, width: 800, height: 600)
+        // User drags title bar: position changes, size stays
+        let current = Rect(x: 200, y: 150, width: 800, height: 600)
+
+        XCTAssertFalse(isWithinTolerance(expected: expected, current: current),
+                       "Position change should fail tolerance")
+        XCTAssertFalse(isSizeChange(expected: expected, current: current),
+                       "Pure move must NOT be detected as size change — it's a real drag")
+    }
+
+    func testSmallResizeWithinToleranceIgnored() {
+        let expected = Rect(x: 100, y: 100, width: 800, height: 600)
+        // Tiny AX rounding noise: 5px height change (within tolerance of 10)
+        let current = Rect(x: 100, y: 100, width: 800, height: 605)
+
+        XCTAssertTrue(isWithinTolerance(expected: expected, current: current),
+                      "Small change within tolerance should be treated as no change")
+    }
+
+    func testCalculateMovementDetectsGrowDown() {
+        let from = Rect(x: 100, y: 100, width: 800, height: 600)
+        let change = Rect(x: 100, y: 100, width: 800, height: 700)
+        let movement = calculateMovement(from: from, change: change)
+
+        XCTAssertTrue(movement.contains(.grow))
+        XCTAssertTrue(movement.contains(.down))
+        XCTAssertFalse(movement == .moved,
+                       "Height resize should be grow+down, not a move")
+    }
+
+    func testCalculateMovementDetectsShrinkUp() {
+        let from = Rect(x: 100, y: 100, width: 800, height: 600)
+        let change = Rect(x: 100, y: 100, width: 800, height: 500)
+        let movement = calculateMovement(from: from, change: change)
+
+        XCTAssertTrue(movement.contains(.shrink))
+        XCTAssertTrue(movement.contains(.up))
+    }
+}
