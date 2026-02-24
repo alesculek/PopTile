@@ -108,6 +108,11 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
 
         menu.addItem(NSMenuItem.separator())
 
+        // About
+        let aboutItem = NSMenuItem(title: "About PopTile", action: #selector(showAbout), keyEquivalent: "")
+        aboutItem.target = self
+        menu.addItem(aboutItem)
+
         // Quit
         let quitItem = NSMenuItem(title: "Quit PopTile", action: #selector(quit), keyEquivalent: "q")
         quitItem.target = self
@@ -226,6 +231,26 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         """
         alert.alertStyle = .informational
         alert.addButton(withTitle: "OK")
+        alert.runModal()
+    }
+
+    @objc private func showAbout() {
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev"
+        let alert = NSAlert()
+        alert.messageText = "PopTile v\(version)"
+        alert.informativeText = """
+        Auto-tiling window manager for macOS.
+        Ported from pop-shell by System76.
+
+        https://github.com/alesculek/PopTile
+        """
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "OK")
+
+        if let appIcon = NSImage(named: NSImage.applicationIconName) {
+            alert.icon = appIcon
+        }
+
         alert.runModal()
     }
 

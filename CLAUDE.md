@@ -59,3 +59,43 @@ SPM with 3 targets:
 - `PopTileTests` — Tests/PopTileTests/
 
 Test target imports `@testable import PopTileCore`.
+
+## Release
+
+When asked to release, follow these steps:
+
+1. **Bump version** in `Sources/PopTile/Resources/Info.plist` (both `CFBundleVersion` and `CFBundleShortVersionString`).
+
+2. **Run tests**: `swift test` — all must pass.
+
+3. **Commit & push**:
+   ```bash
+   git add -A && git commit -m "Release vX.Y.Z" && git push
+   ```
+
+4. **Build release .app bundle**:
+   ```bash
+   swift build -c release
+   mkdir -p /private/tmp/poptile-release/PopTile.app/Contents/MacOS \
+            /private/tmp/poptile-release/PopTile.app/Contents/Resources
+   cp .build/release/PopTile /private/tmp/poptile-release/PopTile.app/Contents/MacOS/
+   cp Sources/PopTile/Resources/Info.plist /private/tmp/poptile-release/PopTile.app/Contents/
+   codesign --force --deep --sign - /private/tmp/poptile-release/PopTile.app
+   cd /private/tmp/poptile-release && zip -r PopTile-vX.Y.Z-macos-arm64.zip PopTile.app
+   ```
+
+5. **Create GitHub release**:
+   ```bash
+   gh release create vX.Y.Z /private/tmp/poptile-release/PopTile-vX.Y.Z-macos-arm64.zip \
+     --title "PopTile vX.Y.Z" --notes "Release notes here"
+   ```
+
+6. **Update Homebrew cask** at `/opt/homebrew/Library/Taps/alesculek/homebrew-tap/Casks/poptile.rb`:
+   - Update `version` to the new version
+   - Compute sha256: `shasum -a 256 /private/tmp/poptile-release/PopTile-vX.Y.Z-macos-arm64.zip`
+   - Update `sha256` in the cask
+   - Commit & push: `cd /opt/homebrew/Library/Taps/alesculek/homebrew-tap && git add -A && git commit -m "Update poptile to vX.Y.Z" && git push`
+
+7. **Update local install**: `brew upgrade --cask poptile` or reinstall.
+
+8. **Signing for dev**: The dev cert "PopTile Dev" (SHA: 280C74949E7439587233AEF7BAD0EB5666059A9D) is in the login keychain. Use `codesign --force --deep --sign "PopTile Dev" ~/Applications/PopTile.app` when installing locally to preserve TCC accessibility permissions across rebuilds.

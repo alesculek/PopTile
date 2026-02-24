@@ -271,6 +271,12 @@ final class Engine {
             activeBorder.hide()
             return
         }
+        // Don't show border over floating windows — they're already visually
+        // distinct and the .floating-level overlay would cover their content
+        if containsTag(window.entity, Tags.floating.rawValue) {
+            activeBorder.hide()
+            return
+        }
         let rect = window.rect()
         guard rect.width > 0 && rect.height > 0 else { return }
         activeBorder.update(rect: rect, color: settings.hintColor,
@@ -427,7 +433,10 @@ final class Engine {
                abs(current.height - expected.height) <= tolerance {
                 return  // Window is still where we placed it — not a user drag
             }
-            tileWin.expectedRect = nil
+            // Update expectedRect to current position so resize detection still has
+            // a reference rect (setting to nil caused resize to silently fail because
+            // fromRect would equal newRect → calculateMovement returns .none)
+            tileWin.expectedRect = current
         }
 
         if let drag = dragState, drag.entity == tileWin.entity {
@@ -460,11 +469,14 @@ final class Engine {
               let fork = autoTiler.forest.forks.get(forkEntity) else { return }
 
         let newRect = tileWin.rect()
-        // Compare against where we last tiled this window (not overlayRect which is drag hint)
-        let fromRect = tileWin.expectedRect ?? newRect
+        guard let fromRect = tileWin.expectedRect else {
+            log(" onWindowResized SKIP \(tileWin.title()) — no expectedRect")
+            return
+        }
         let movement = calculateMovement(from: fromRect, change: newRect)
 
         if !movement.isEmpty && movement != .moved {
+            log(" onWindowResized \(tileWin.title()) movement=\(movement) from=\(fromRect.width)x\(fromRect.height) to=\(newRect.width)x\(newRect.height)")
             grabOp = GrabOp(entity: tileWin.entity, rect: fromRect)
             autoTiler.forest.resize(self, forkEntity: forkEntity, fork: fork,
                                     winEntity: tileWin.entity, movement: movement,
@@ -473,6 +485,12 @@ final class Engine {
             autoTiler.forest.arrange(self, fork.workspace)
             isPerformingTile = false
             grabOp = nil
+            // Reset grace period for the user-resized window so continuous
+            // drag-resize events are not suppressed by the 500ms grace period
+            // (arrange sets lastTiledAt on ALL windows including this one)
+            tileWin.lastTiledAt = 0
+            // Update active border to follow the resized layout
+            updateActiveBorder(tileWin)
         }
     }
 
