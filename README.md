@@ -49,10 +49,20 @@ PopTile runs as a menu bar app. Click the grid icon for controls:
 | Toggle auto-tiling | Ctrl+Option + T |
 | Enter tiling mode | Ctrl+Option + Return |
 | Resize | Ctrl+Option + [ / ] |
+| Active window border | Ctrl+Option + B |
+
+### Recommended: Hide the Dock
+
+For the best tiling experience, enable Dock auto-hide so PopTile can use the full screen area. PopTile automatically retiles when the Dock hides or shows.
+
+```bash
+defaults write com.apple.dock autohide -bool true && killall Dock
+```
+
+To revert: `defaults write com.apple.dock autohide -bool false && killall Dock`
 
 ## Known Limitations
 
-- **Electron apps** (Slack, VS Code, Discord, etc.) may not expose windows to the macOS Accessibility API. If an app's windows aren't tiled, it's likely because the app doesn't support AX window discovery. Check the log for "No AX windows" messages.
 - **Minimum window size** — some apps enforce a minimum size. When many windows tile on a small screen, tiles may be too small and apps will silently ignore the resize.
 - **macOS Accessibility permission** is required. PopTile cannot function without it.
 

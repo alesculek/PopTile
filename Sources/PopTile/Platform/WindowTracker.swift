@@ -41,6 +41,13 @@ final class WindowTracker {
             }
         })
 
+        // Observe screen parameter changes (dock hide/show, monitor added/removed, resolution change)
+        workspaceObservers.append(NotificationCenter.default.addObserver(
+            forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            self?.screenParametersChanged()
+        })
+
         // Scan all currently running apps
         for app in NSWorkspace.shared.runningApplications {
             if app.activationPolicy == .regular {
@@ -86,6 +93,11 @@ final class WindowTracker {
         DispatchQueue.main.async { [weak self] in
             self?.engine?.onFocusChanged()
         }
+    }
+
+    private func screenParametersChanged() {
+        log(" Screen parameters changed (dock/monitor/resolution) — retiling")
+        engine?.retileAll()
     }
 
     // MARK: - AXObserver setup
