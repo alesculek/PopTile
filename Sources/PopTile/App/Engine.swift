@@ -696,10 +696,9 @@ final class Engine {
                                height: hh - gapOuter - gapInnerHalf)
                 hintSide = .bottom
             } else {
-                // Center zone with no target — show the dragged window's original
-                // position as hint ("drop here = back where it was") instead of
-                // a misleading full-screen overlay
-                hintRect = drag.originalRect
+                hintRect = Rect(x: workArea.x + gapOuter, y: workArea.y + gapOuter,
+                               width: workArea.width - gapOuter * 2,
+                               height: workArea.height - gapOuter * 2)
                 hintSide = .center
             }
 
