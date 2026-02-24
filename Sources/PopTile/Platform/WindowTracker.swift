@@ -118,6 +118,7 @@ final class WindowTracker {
             kAXWindowResizedNotification,
             kAXWindowMiniaturizedNotification,
             kAXWindowDeminiaturizedNotification,
+            kAXTitleChangedNotification,
         ]
 
         for notif in notifications {
@@ -157,6 +158,8 @@ final class WindowTracker {
             engine?.onWindowMinimized(element)
         case kAXWindowDeminiaturizedNotification:
             handleWindowCreated(element) // Re-tile when unminimized
+        case kAXTitleChangedNotification:
+            engine?.onWindowTitleChanged(element)
         default:
             break
         }

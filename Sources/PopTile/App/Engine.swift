@@ -332,6 +332,13 @@ final class Engine {
         }
     }
 
+    func onWindowTitleChanged(_ element: AXUIElement) {
+        guard let tileWin = findTileWindow(element) else { return }
+        guard let stackIdx = tileWin.stack, let autoTiler,
+              let container = autoTiler.forest.stacks.get(stackIdx) else { return }
+        container.refreshTitles()
+    }
+
     func onWindowMoved(_ element: AXUIElement) {
         guard !isPerformingTile else { return }
         guard let tileWin = findTileWindow(element) else { return }

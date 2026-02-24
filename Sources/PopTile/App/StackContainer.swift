@@ -160,6 +160,11 @@ final class StackContainer {
         tabBar.destroy()
     }
 
+    /// Refresh tab titles from current window titles (called on kAXTitleChangedNotification)
+    func refreshTitles() {
+        rebuildTabBar()
+    }
+
     // MARK: - Private
 
     private func onTabClicked(_ entity: Entity) {
