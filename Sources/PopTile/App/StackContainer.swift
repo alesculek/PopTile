@@ -24,7 +24,7 @@ final class StackContainer {
         self.active = active
         self.monitor = monitor
         self.workspace = workspace
-        self.tabsHeight = 24  // points — compact tab bar
+        self.tabsHeight = 28  // points — tab bar height
         self.tabBar = StackTabBar()
         self.tabBar.tabsHeight = CGFloat(tabsHeight)
         self.tabBar.setup { [weak self] entity in

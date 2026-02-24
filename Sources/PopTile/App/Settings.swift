@@ -88,6 +88,11 @@ final class Settings {
         set { defaults.set(newValue, forKey: "stackingWithMouse") }
     }
 
+    var showActiveWindowBorder: Bool {
+        get { defaults.object(forKey: "showActiveWindowBorder") as? Bool ?? false }
+        set { defaults.set(newValue, forKey: "showActiveWindowBorder") }
+    }
+
     // MARK: - Auto-grouping threshold
 
     /// Max individual tiles per monitor before auto-grouping same-app windows

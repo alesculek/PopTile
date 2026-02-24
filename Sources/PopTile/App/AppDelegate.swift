@@ -84,6 +84,13 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         displayItem.submenu = displayMenu
         menu.addItem(displayItem)
 
+        // Active window border toggle
+        let borderItem = NSMenuItem(title: "Active Window Border", action: #selector(toggleActiveWindowBorder), keyEquivalent: "")
+        borderItem.target = self
+        borderItem.tag = 200
+        borderItem.state = engine.settings.showActiveWindowBorder ? .on : .off
+        menu.addItem(borderItem)
+
         menu.addItem(NSMenuItem.separator())
 
         // Retile all
@@ -132,6 +139,13 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             log(" Added float exception: \(bundleId) (\(frontApp.localizedName ?? ""))")
             // Detach this app's windows from tiling
             engine.detachAppWindows(bundleId: bundleId)
+        }
+    }
+
+    @objc private func toggleActiveWindowBorder() {
+        engine.toggleActiveWindowBorder()
+        if let menu = statusItem.menu, let item = menu.item(withTag: 200) {
+            item.state = engine.settings.showActiveWindowBorder ? .on : .off
         }
     }
 
@@ -203,6 +217,9 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
 
         Resize:
           Ctrl+Option + [ / ]
+
+        Active Window Border:
+          Ctrl+Option + B
 
         Note: Modifier is Ctrl+Option (equivalent to
         Pop!_OS Super key behavior).

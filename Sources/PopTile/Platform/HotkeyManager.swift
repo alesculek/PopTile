@@ -125,6 +125,7 @@ enum KeyCode {
     static let g: UInt16 = 5
     static let t: UInt16 = 17
     static let tab: UInt16 = 48
+    static let b: UInt16 = 11
     static let leftBracket: UInt16 = 33
     static let rightBracket: UInt16 = 30
 }

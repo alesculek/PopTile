@@ -35,6 +35,7 @@ final class Engine {
     var windowTracker: WindowTracker!
     var hotkeyManager: HotkeyManager = HotkeyManager()
     private let overlay: TilingOverlay = TilingOverlay()
+    private let activeBorder: ActiveWindowBorder = ActiveWindowBorder()
 
     // MARK: - State
 
@@ -229,6 +230,31 @@ final class Engine {
         overlay.visible = false
     }
 
+    // MARK: - Active window border
+
+    func toggleActiveWindowBorder() {
+        settings.showActiveWindowBorder.toggle()
+        if settings.showActiveWindowBorder {
+            if let win = focusWindow() {
+                updateActiveBorder(win)
+            }
+        } else {
+            activeBorder.hide()
+        }
+    }
+
+    private func updateActiveBorder(_ window: TileWindow) {
+        guard settings.showActiveWindowBorder else {
+            activeBorder.hide()
+            return
+        }
+        let rect = window.rect()
+        guard rect.width > 0 && rect.height > 0 else { return }
+        activeBorder.update(rect: rect, color: settings.hintColor,
+                           borderRadius: CGFloat(settings.activeHintBorderRadius))
+        activeBorder.show()
+    }
+
     // MARK: - Tags
 
     func addTag(_ entity: Entity, _ tag: Int) {
@@ -330,6 +356,9 @@ final class Engine {
            let container = autoTiler.forest.stacks.get(stackIdx) {
             container.activate(tileWin.entity)
         }
+
+        // Update active window border
+        updateActiveBorder(tileWin)
     }
 
     func onWindowTitleChanged(_ element: AXUIElement) {
@@ -456,6 +485,9 @@ final class Engine {
             entity: window.entity,
             originalRect: window.rect()
         )
+
+        // Hide active border during drag to avoid visual clutter
+        activeBorder.hide()
 
         log(" Drag started: \(window.title())")
 
@@ -669,6 +701,9 @@ final class Engine {
 
         isPerformingTile = false
         dragState = nil
+
+        // Re-show active window border after tiling
+        updateActiveBorder(window)
     }
 
     private func cancelDrag() {
@@ -848,6 +883,11 @@ final class Engine {
         hotkeyManager.register(KeyCode.returnKey, ctrlOpt) { [weak self] in
             guard let self else { return }
             self.tiler.enter(self)
+        }
+
+        // Toggle active window border: Ctrl+Option+B
+        hotkeyManager.register(KeyCode.b, ctrlOpt) { [weak self] in
+            self?.toggleActiveWindowBorder()
         }
 
         // Resize: Ctrl+Option + [ / ]

@@ -99,7 +99,7 @@ final class Node {
             record(entity, parent, area.clone())
 
         case .stack(let data):
-            let tabBarHeight = 24  // points — compact tab bar
+            let tabBarHeight = 28  // points — tab bar height (matches StackContainer.tabsHeight)
             var stackArea = area.clone()
             stackArea.y += tabBarHeight
             stackArea.height -= tabBarHeight

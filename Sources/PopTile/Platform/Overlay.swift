@@ -179,7 +179,7 @@ final class StackTabBar {
     private var onTabClicked: ((Entity) -> Void)?
     var onReorder: ((Int, Int) -> Void)?
 
-    var tabsHeight: CGFloat = 24.0
+    var tabsHeight: CGFloat = 28.0
 
     func setup(onTabClicked: @escaping (Entity) -> Void) {
         self.onTabClicked = onTabClicked
@@ -221,7 +221,7 @@ final class StackTabBar {
         button.wantsLayer = true
         // Truncate long titles to keep tabs compact
         button.title = title.count > 25 ? String(title.prefix(22)) + "..." : title
-        button.font = .systemFont(ofSize: 11)
+        button.font = .systemFont(ofSize: 12)
         button.lineBreakMode = .byTruncatingTail
 
         if isActive {
@@ -252,6 +252,9 @@ final class StackTabBar {
         button.action = #selector(tabClicked(_:))
 
         stackView.addArrangedSubview(button)
+        // Make button fill the full height of the tab bar
+        button.heightAnchor.constraint(equalTo: stackView.heightAnchor).isActive = true
+
         tabs[entity] = button
         tabOrder.append(entity)
         dropView?.tabCount = tabOrder.count
@@ -319,6 +322,73 @@ final class StackTabBar {
         guard let rgb = color.usingColorSpace(.sRGB) else { return false }
         let luminance = 0.299 * rgb.redComponent + 0.587 * rgb.greenComponent + 0.114 * rgb.blueComponent
         return luminance < 0.5
+    }
+}
+
+// MARK: - Active Window Border
+
+/// Persistent overlay that highlights the currently focused window with a colored border.
+/// Toggled via Settings.showActiveWindowBorder.
+final class ActiveWindowBorder {
+    private var overlayWindow: NSWindow?
+    private var borderView: NSView?
+
+    var visible: Bool {
+        get { overlayWindow?.isVisible ?? false }
+        set { newValue ? show() : hide() }
+    }
+
+    var rect: Rect = .zero
+
+    func update(rect: Rect, color: NSColor, borderWidth: CGFloat = 3.0, borderRadius: CGFloat = 8.0) {
+        self.rect = rect
+        let screenRect = axToScreen(rect)
+
+        if overlayWindow == nil {
+            createWindow()
+        }
+
+        guard let overlayWindow, let borderView else { return }
+
+        overlayWindow.setFrame(screenRect, display: true)
+        borderView.frame = overlayWindow.contentView!.bounds
+        borderView.layer?.borderColor = color.cgColor
+        borderView.layer?.borderWidth = borderWidth
+        borderView.layer?.cornerRadius = borderRadius
+    }
+
+    func show() {
+        overlayWindow?.orderFront(nil)
+    }
+
+    func hide() {
+        overlayWindow?.orderOut(nil)
+    }
+
+    private func createWindow() {
+        let window = NSWindow(
+            contentRect: .zero,
+            styleMask: [.borderless],
+            backing: .buffered,
+            defer: false
+        )
+        window.isOpaque = false
+        window.backgroundColor = .clear
+        window.hasShadow = false
+        window.ignoresMouseEvents = true
+        window.level = .floating
+        window.collectionBehavior = [.canJoinAllSpaces, .stationary]
+
+        let view = NSView(frame: window.contentView!.bounds)
+        view.wantsLayer = true
+        view.layer?.borderColor = NSColor.systemCyan.cgColor
+        view.layer?.borderWidth = 3.0
+        view.layer?.cornerRadius = 8.0
+        view.autoresizingMask = [.width, .height]
+        window.contentView?.addSubview(view)
+
+        overlayWindow = window
+        borderView = view
     }
 }
 
