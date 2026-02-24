@@ -17,6 +17,15 @@ cask "poptile" do
     system_command "/usr/bin/xattr",
                    args: ["-cr", "#{appdir}/PopTile.app"],
                    sudo: false
+    # Re-sign with "PopTile Dev" cert if available in login keychain.
+    # This preserves TCC accessibility permissions across reinstalls
+    # (ad-hoc signatures change every build, causing TCC to revoke access).
+    # For users without the cert, the ad-hoc signature still works — they
+    # just need to re-grant accessibility permission after each update.
+    system_command "/usr/bin/codesign",
+                   args: ["--force", "--deep", "--sign", "PopTile Dev", "#{appdir}/PopTile.app"],
+                   sudo: false,
+                   must_succeed: false
   end
 
   zap trash: [
