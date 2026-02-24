@@ -43,8 +43,15 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
 
         menu.addItem(NSMenuItem.separator())
 
-        // Float current app toggle (dynamic label)
-        let floatItem = NSMenuItem(title: "Float Current App", action: #selector(toggleFloatCurrentApp), keyEquivalent: "")
+        // Float/tile current window toggle (per-window, matches Ctrl+Opt+G)
+        let floatWindowItem = NSMenuItem(title: "Float This Window", action: #selector(toggleFloatWindow), keyEquivalent: "g")
+        floatWindowItem.target = self
+        floatWindowItem.keyEquivalentModifierMask = [.control, .option]
+        floatWindowItem.tag = 101  // tag to find this item for dynamic update
+        menu.addItem(floatWindowItem)
+
+        // Float current app toggle (app-level, persistent)
+        let floatItem = NSMenuItem(title: "Always Float App", action: #selector(toggleFloatCurrentApp), keyEquivalent: "")
         floatItem.target = self
         floatItem.tag = 100  // tag to find this item for dynamic update
         menu.addItem(floatItem)
@@ -130,6 +137,10 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    @objc private func toggleFloatWindow() {
+        engine.toggleFloatingFocusedWindow()
+    }
+
     @objc private func toggleFloatCurrentApp() {
         guard let frontApp = NSWorkspace.shared.frontmostApplication,
               let bundleId = frontApp.bundleIdentifier else { return }
@@ -203,7 +214,10 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
           Ctrl+Option + Arrow Keys (or H/J/K/L)
 
         Move Window:
-          Ctrl+Option+Shift + Arrow Keys
+          Ctrl+Option+Shift + Arrow Keys (or H/J/K/L)
+
+        Float / Tile Window:
+          Ctrl+Option + G  (press again to tile back)
 
         Toggle Orientation:
           Ctrl+Option + O
@@ -211,20 +225,23 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         Toggle Stacking (group windows):
           Ctrl+Option + S
 
-        Toggle Floating:
-          Ctrl+Option + G
-
         Toggle Auto-Tiling:
           Ctrl+Option + T
 
-        Enter Tiling Mode:
-          Ctrl+Option + Return
+        Retile All Windows:
+          Ctrl+Option + R
 
         Resize:
           Ctrl+Option + [ / ]
 
         Active Window Border:
           Ctrl+Option + B
+
+        Enter Tiling Mode:
+          Ctrl+Option + Return
+
+        Exit Tiling Mode:
+          Ctrl+Option + Escape
 
         Note: Modifier is Ctrl+Option (equivalent to
         Pop!_OS Super key behavior).
@@ -263,19 +280,25 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
 
 extension AppDelegate: NSMenuDelegate {
     public func menuNeedsUpdate(_ menu: NSMenu) {
-        // Update "Float Current App" item
+        // Update "Float This Window" / "Tile This Window" item (per-window toggle)
+        if let windowItem = menu.item(withTag: 101) {
+            let isFloating = engine.isFocusedWindowFloating()
+            windowItem.title = isFloating ? "Tile This Window" : "Float This Window"
+            windowItem.state = isFloating ? .on : .off
+        }
+
+        // Update "Always Float <App>" item (app-level toggle)
         if let floatItem = menu.item(withTag: 100) {
             if let frontApp = NSWorkspace.shared.frontmostApplication,
                let bundleId = frontApp.bundleIdentifier {
                 let name = frontApp.localizedName ?? bundleId
                 let isFloated = engine.settings.shouldFloat(bundleId: bundleId)
-                floatItem.title = isFloated ? "Tile \(name)" : "Float \(name)"
+                floatItem.title = isFloated ? "Always Tile \(name)" : "Always Float \(name)"
                 floatItem.state = isFloated ? .on : .off
             } else {
-                floatItem.title = "Float Current App"
+                floatItem.title = "Always Float App"
                 floatItem.state = .off
             }
         }
-
     }
 }

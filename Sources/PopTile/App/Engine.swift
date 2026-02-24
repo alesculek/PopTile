@@ -302,6 +302,20 @@ final class Engine {
 
     // MARK: - Floating windows
 
+    /// Whether the currently focused window is floating (per-window tag, not app-level exception).
+    func isFocusedWindowFloating() -> Bool {
+        guard let focused = focusWindow() else { return false }
+        return containsTag(focused.entity, Tags.floating.rawValue)
+    }
+
+    /// Toggle floating on the focused window and update the active border.
+    func toggleFloatingFocusedWindow() {
+        autoTiler?.toggleFloating(self)
+        if let win = focusWindow() {
+            updateActiveBorder(win)
+        }
+    }
+
     /// Raise all floating windows so they stay visually on top of tiled windows.
     func raiseFloatingWindows() {
         for (entity, tags) in tagStorage {
@@ -929,11 +943,7 @@ final class Engine {
 
         // Toggle floating: Ctrl+Option+G
         hotkeyManager.register(KeyCode.g, ctrlOpt) { [weak self] in
-            guard let self else { return }
-            self.autoTiler?.toggleFloating(self)
-            if let win = self.focusWindow() {
-                self.updateActiveBorder(win)
-            }
+            self?.toggleFloatingFocusedWindow()
         }
 
         // Toggle auto-tiling: Ctrl+Option+T

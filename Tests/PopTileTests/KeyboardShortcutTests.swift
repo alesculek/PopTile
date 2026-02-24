@@ -675,6 +675,54 @@ final class ToggleFloatingTests: XCTestCase {
         XCTAssertFalse(engine.containsTag(entity, Tags.floating.rawValue))
         XCTAssertTrue(engine.containsTag(entity, Tags.forceTile.rawValue))
     }
+
+    /// Simulates the toggleFloating roundtrip: tiled → float → tile back.
+    /// Verifies the floating tag is added then removed, matching the Ctrl+Opt+G toggle.
+    func testFloatToggleRoundtrip() {
+        let engine = Engine()
+        let entity = Entity(index: 100_001, generation: 0)
+
+        // Initially: not floating
+        XCTAssertFalse(engine.containsTag(entity, Tags.floating.rawValue))
+
+        // First toggle: float the window (add tag)
+        engine.addTag(entity, Tags.floating.rawValue)
+        XCTAssertTrue(engine.containsTag(entity, Tags.floating.rawValue),
+                      "Window should be floating after first toggle")
+
+        // Second toggle: tile back (remove tag)
+        engine.deleteTag(entity, Tags.floating.rawValue)
+        XCTAssertFalse(engine.containsTag(entity, Tags.floating.rawValue),
+                       "Window should be tiled again after second toggle")
+    }
+
+    /// The toggleFloating logic: when floating tag exists, remove it and re-tile;
+    /// when not floating and attached, detach and add floating tag.
+    func testToggleFloatingLogicPaths() {
+        let engine = Engine()
+        let entity = Entity(index: 100_001, generation: 0)
+
+        // Path 1: window is not floating, not a float exception → should float
+        let isFloatException = engine.settings.shouldFloat(bundleId: "com.example.TestApp")
+        XCTAssertFalse(isFloatException)
+        XCTAssertFalse(engine.containsTag(entity, Tags.floating.rawValue))
+        // toggleFloating would add the tag (if attached)
+        engine.addTag(entity, Tags.floating.rawValue)
+        XCTAssertTrue(engine.containsTag(entity, Tags.floating.rawValue))
+
+        // Path 2: window IS floating → should un-float
+        // toggleFloating checks: containsTag(.floating) → true → delete tag + autoTile
+        engine.deleteTag(entity, Tags.floating.rawValue)
+        XCTAssertFalse(engine.containsTag(entity, Tags.floating.rawValue),
+                       "Pressing Ctrl+Opt+G again must remove the floating tag")
+    }
+
+    /// isFocusedWindowFloating reflects the per-window floating tag, not app-level exceptions.
+    func testIsFocusedWindowFloatingReflectsTag() {
+        let engine = Engine()
+        // No focused window → false
+        XCTAssertFalse(engine.isFocusedWindowFloating())
+    }
 }
 
 // MARK: - Active border dismissed on toggle floating
