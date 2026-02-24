@@ -183,7 +183,8 @@ final class StackTabBar {
         window.backgroundColor = NSColor(calibratedWhite: 0.2, alpha: 0.9)
         window.hasShadow = true
         window.ignoresMouseEvents = false
-        window.level = .floating
+        // Use normal level so tab bars don't float above other windows
+        window.level = .normal
         window.collectionBehavior = [.canJoinAllSpaces, .stationary]
 
         let sv = NSStackView(frame: window.contentView!.bounds)

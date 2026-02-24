@@ -74,6 +74,51 @@ final class SettingsTests: XCTestCase {
         XCTAssertFalse(settings.shouldFloat(bundleId: nil))
     }
 
+    // MARK: - Float exception management
+
+    func testAddFloatException() {
+        let bundleId = "com.test.floatme"
+        settings.addFloatException(bundleId)
+        XCTAssertTrue(settings.shouldFloat(bundleId: bundleId))
+        // Cleanup
+        settings.removeFloatException(bundleId)
+    }
+
+    func testRemoveFloatException() {
+        let bundleId = "com.test.removeme"
+        settings.addFloatException(bundleId)
+        XCTAssertTrue(settings.shouldFloat(bundleId: bundleId))
+        settings.removeFloatException(bundleId)
+        XCTAssertFalse(settings.shouldFloat(bundleId: bundleId))
+    }
+
+    func testAddFloatExceptionNoDuplicates() {
+        let bundleId = "com.test.nodup"
+        let countBefore = settings.floatExceptions.count
+        settings.addFloatException(bundleId)
+        settings.addFloatException(bundleId)  // duplicate
+        XCTAssertEqual(settings.floatExceptions.filter { $0 == bundleId }.count, 1)
+        // Cleanup
+        settings.removeFloatException(bundleId)
+    }
+
+    func testDefaultFloatExceptionsIncludeCalculator() {
+        XCTAssertTrue(settings.shouldFloat(bundleId: "com.apple.Calculator"))
+    }
+
+    func testDefaultFloatExceptionsIncludeDictionary() {
+        XCTAssertTrue(settings.shouldFloat(bundleId: "com.apple.Dictionary"))
+    }
+
+    func testDefaultFloatExceptionsExcludeSafari() {
+        // Safari was removed from defaults — full-size apps should tile
+        XCTAssertFalse(settings.shouldFloat(bundleId: "com.apple.Safari"))
+    }
+
+    func testDefaultFloatExceptionsExcludePreview() {
+        XCTAssertFalse(settings.shouldFloat(bundleId: "com.apple.Preview"))
+    }
+
     // MARK: - Smart gaps default
 
     func testDefaultSmartGaps() {

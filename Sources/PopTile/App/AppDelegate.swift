@@ -5,6 +5,7 @@ import AppKit
 public final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private let engine = Engine()
+    private lazy var floatConfigWindow = FloatConfigWindow(settings: engine.settings)
 
     public override init() { super.init() }
 
@@ -23,7 +24,6 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
 
         if let button = statusItem.button {
-            // Use a system symbol for the tiling icon
             if let image = NSImage(systemSymbolName: "rectangle.split.2x2", accessibilityDescription: "PopTile") {
                 image.isTemplate = true
                 button.image = image
@@ -33,12 +33,26 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         let menu = NSMenu()
+        menu.delegate = self
 
         // Auto-tiling toggle
         let tilingItem = NSMenuItem(title: "Auto-Tiling", action: #selector(toggleTiling), keyEquivalent: "")
         tilingItem.target = self
         tilingItem.state = engine.settings.autoTileEnabled ? .on : .off
         menu.addItem(tilingItem)
+
+        menu.addItem(NSMenuItem.separator())
+
+        // Float current app toggle (dynamic label)
+        let floatItem = NSMenuItem(title: "Float Current App", action: #selector(toggleFloatCurrentApp), keyEquivalent: "")
+        floatItem.target = self
+        floatItem.tag = 100  // tag to find this item for dynamic update
+        menu.addItem(floatItem)
+
+        // Float exceptions config window
+        let floatConfigItem = NSMenuItem(title: "Float Exceptions...", action: #selector(showFloatConfig), keyEquivalent: "")
+        floatConfigItem.target = self
+        menu.addItem(floatConfigItem)
 
         menu.addItem(NSMenuItem.separator())
 
@@ -99,24 +113,48 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func toggleTiling() {
         engine.toggleTiling()
-        // Update menu item state
         if let menu = statusItem.menu, let item = menu.items.first {
             item.state = engine.settings.autoTileEnabled ? .on : .off
         }
+    }
+
+    @objc private func toggleFloatCurrentApp() {
+        guard let frontApp = NSWorkspace.shared.frontmostApplication,
+              let bundleId = frontApp.bundleIdentifier else { return }
+
+        if engine.settings.shouldFloat(bundleId: bundleId) {
+            engine.settings.removeFloatException(bundleId)
+            log(" Removed float exception: \(bundleId) (\(frontApp.localizedName ?? ""))")
+            // Re-tile this app's windows
+            engine.retileAppWindows(bundleId: bundleId)
+        } else {
+            engine.settings.addFloatException(bundleId)
+            log(" Added float exception: \(bundleId) (\(frontApp.localizedName ?? ""))")
+            // Detach this app's windows from tiling
+            engine.detachAppWindows(bundleId: bundleId)
+        }
+    }
+
+    @objc private func showFloatConfig() {
+        floatConfigWindow.show()
+    }
+
+    @objc private func removeFloatException(_ sender: NSMenuItem) {
+        guard let bundleId = sender.representedObject as? String else { return }
+        engine.settings.removeFloatException(bundleId)
+        log(" Removed float exception: \(bundleId)")
     }
 
     @objc private func setDisplayMode(_ sender: NSMenuItem) {
         guard let mode = sender.representedObject as? String else { return }
         engine.settings.tilingDisplayMode = mode
 
-        // Update menu checkmarks
         if let displayMenu = sender.menu {
             for item in displayMenu.items {
                 item.state = (item.representedObject as? String) == mode ? .on : .off
             }
         }
 
-        // Retile with new display config
         engine.retileAll()
     }
 
@@ -125,14 +163,12 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         engine.settings.gapOuter = gap
         engine.settings.gapInner = gap
 
-        // Update menu checkmarks
         if let gapMenu = sender.menu {
             for item in gapMenu.items {
                 item.state = item.tag == gap ? .on : .off
             }
         }
 
-        // Retile with new gaps
         engine.retileAll()
     }
 
@@ -178,5 +214,26 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func quit() {
         NSApplication.shared.terminate(nil)
+    }
+}
+
+// MARK: - Dynamic menu updates
+
+extension AppDelegate: NSMenuDelegate {
+    public func menuNeedsUpdate(_ menu: NSMenu) {
+        // Update "Float Current App" item
+        if let floatItem = menu.item(withTag: 100) {
+            if let frontApp = NSWorkspace.shared.frontmostApplication,
+               let bundleId = frontApp.bundleIdentifier {
+                let name = frontApp.localizedName ?? bundleId
+                let isFloated = engine.settings.shouldFloat(bundleId: bundleId)
+                floatItem.title = isFloated ? "Tile \(name)" : "Float \(name)"
+                floatItem.state = isFloated ? .on : .off
+            } else {
+                floatItem.title = "Float Current App"
+                floatItem.state = .off
+            }
+        }
+
     }
 }

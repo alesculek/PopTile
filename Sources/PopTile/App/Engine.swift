@@ -281,9 +281,12 @@ final class Engine {
             isPerformingTile = true
             autoTiler.autoTile(self, tileWin)
             isPerformingTile = false
+            let attached = autoTiler.attached.contains(tileWin.entity)
+            let r = tileWin.rect()
+            log(" Window added: \(tileWin.title()) on monitor \(monitorIdx) attached=\(attached) pos=(\(r.x),\(r.y)) size=\(r.width)x\(r.height)")
+        } else {
+            log(" Window added: \(tileWin.title()) on monitor \(monitorIdx) (not tiled)")
         }
-
-        log(" Window added: \(tileWin.title()) on monitor \(monitorIdx)")
     }
 
     func onWindowDestroyed(_ element: AXUIElement) {
@@ -330,10 +333,6 @@ final class Engine {
         guard let tileWin = findTileWindow(element) else { return }
 
         // Filter out async AX notifications from our own tiling moves.
-        // AX notifications arrive asynchronously after isPerformingTile is reset.
-        // We use two guards:
-        //   1. Time-based: ignore events within grace period after last tile
-        //   2. Position-based: ignore if window is still near where we placed it
         let now = CFAbsoluteTimeGetCurrent()
         if now - tileWin.lastTiledAt < Self.tileGracePeriod {
             return  // Still within grace period after our tiling
@@ -348,22 +347,21 @@ final class Engine {
                abs(current.height - expected.height) <= tolerance {
                 return  // Window is still where we placed it — not a user drag
             }
-            // Position differs significantly — user is actually dragging
             tileWin.expectedRect = nil
         }
 
-        // If already dragging this window, the poll timer handles updates
         if let drag = dragState, drag.entity == tileWin.entity {
             return
         }
 
-        // Only start drag for windows that are tiled (attached)
-        guard let autoTiler, autoTiler.attached.contains(tileWin.entity) else { return }
+        guard let autoTiler else { return }
+        guard autoTiler.attached.contains(tileWin.entity) else {
+            log(" onWindowMoved SKIP \(tileWin.title()) — not attached")
+            return
+        }
 
-        // Check that mouse button is actually pressed (user is dragging)
         guard NSEvent.pressedMouseButtons & 1 != 0 else { return }
 
-        // Start a new drag operation (like pop-shell grab-op-begin)
         startDrag(tileWin)
     }
 
@@ -682,6 +680,35 @@ final class Engine {
             // Fallback
             autoTiler.attachToWorkspace(self, window, workspaceId(window))
         }
+    }
+
+    // MARK: - Per-app tiling control
+
+    func detachAppWindows(bundleId: String) {
+        guard let autoTiler else { return }
+        isPerformingTile = true
+        for (_, window) in windows.iter() {
+            if let app = NSRunningApplication(processIdentifier: window.axWindow.pid),
+               app.bundleIdentifier == bundleId,
+               autoTiler.attached.contains(window.entity) {
+                autoTiler.detachWindow(self, window.entity)
+            }
+        }
+        isPerformingTile = false
+    }
+
+    func retileAppWindows(bundleId: String) {
+        guard let autoTiler else { return }
+        isPerformingTile = true
+        for (_, window) in windows.iter() {
+            if let app = NSRunningApplication(processIdentifier: window.axWindow.pid),
+               app.bundleIdentifier == bundleId,
+               window.isTilable(self),
+               !autoTiler.attached.contains(window.entity) {
+                autoTiler.autoTile(self, window)
+            }
+        }
+        isPerformingTile = false
     }
 
     // MARK: - Retile all

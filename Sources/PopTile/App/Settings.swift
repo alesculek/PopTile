@@ -120,38 +120,36 @@ final class Settings {
         return floatExceptions.contains(bundleId)
     }
 
+    func addFloatException(_ bundleId: String) {
+        var list = floatExceptions
+        if !list.contains(bundleId) {
+            list.append(bundleId)
+            floatExceptions = list
+        }
+    }
+
+    func removeFloatException(_ bundleId: String) {
+        var list = floatExceptions
+        list.removeAll { $0 == bundleId }
+        floatExceptions = list
+    }
+
     private static let defaultFloatExceptions: [String] = [
         "com.apple.systempreferences",
         "com.apple.SystemPreferences",
-        "com.apple.Preferences",              // System Settings on newer macOS
+        "com.apple.Preferences",
         "com.apple.Calculator",
-        "com.apple.Preview",
-        "com.apple.ActivityMonitor",
-        "com.apple.ScreenSharing",
-        "com.apple.FaceTime",
-        "com.apple.Dictionary",
-        "com.apple.QuickTimePlayerX",
+        "com.apple.DigitalColorMeter",
         "com.apple.ScreenCaptureUI",
         "com.apple.screencaptureui",
-        "com.apple.DigitalColorMeter",
+        "com.apple.ActivityMonitor",
         "com.apple.DiskUtility",
         "com.apple.keychainaccess",
+        "com.apple.Dictionary",
         "com.apple.FontBook",
-        "com.apple.iCal",                     // Calendar
-        "com.apple.Calendar",
-        "com.apple.reminders",
+        "com.apple.ScreenSharing",
         "com.apple.stickies",
-        "com.1password.1password",
-        "com.agilebits.onepassword7",
-        "com.fortinet.FortiClient",
-        "com.fortinet.forticlient",
-        "com.fortinet.FortiClientAgent",
         "com.apple.PhotoBooth",
-        "com.apple.Chess",
-        "com.apple.Grapher",
-        "org.pqrs.Karabiner-Elements.Preferences",
-        "com.apple.Console",
-        "com.apple.Safari",                   // Safari
     ]
 }
 

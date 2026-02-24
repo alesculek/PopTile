@@ -675,7 +675,11 @@ final class Forest: World {
 // MARK: - Window movement
 
 private func moveWindow(engine: Engine, window: TileWindow, rect: Rect) {
-    guard rect.width > 0 && rect.height > 0 else { return }
+    guard rect.width > 0 && rect.height > 0 else {
+        log(" moveWindow SKIP \(window.title()) — invalid rect \(rect.width)x\(rect.height)")
+        return
+    }
+    log(" moveWindow \(window.title()) → (\(rect.x),\(rect.y)) \(rect.width)x\(rect.height)")
     // Record expected position and time BEFORE moving so async AX notifications can be filtered
     window.expectedRect = rect
     window.lastTiledAt = CFAbsoluteTimeGetCurrent()
