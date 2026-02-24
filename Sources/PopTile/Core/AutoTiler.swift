@@ -229,6 +229,7 @@ final class AutoTiler {
                 if let _ = attached.get(focused.entity) {
                     detachWindow(engine, focused.entity)
                     engine.addTag(focused.entity, Tags.floating.rawValue)
+                    focused.axWindow.raise()
                 }
             }
         }

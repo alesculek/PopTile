@@ -271,6 +271,18 @@ final class Engine {
 
     private var tagStorage: [Entity: Set<Int>] = [:]
 
+    // MARK: - Floating windows
+
+    /// Raise all floating windows so they stay visually on top of tiled windows.
+    func raiseFloatingWindows() {
+        for (entity, tags) in tagStorage {
+            if tags.contains(Tags.floating.rawValue),
+               let window = windows.get(entity) {
+                window.axWindow.raise()
+            }
+        }
+    }
+
     // MARK: - Focus handling
 
     func focusLeft() {
@@ -359,6 +371,11 @@ final class Engine {
 
         // Update active window border
         updateActiveBorder(tileWin)
+
+        // Keep floating windows on top (unless the focused window itself is floating)
+        if !containsTag(tileWin.entity, Tags.floating.rawValue) {
+            raiseFloatingWindows()
+        }
     }
 
     func onWindowTitleChanged(_ element: AXUIElement) {
@@ -802,6 +819,7 @@ final class Engine {
         }
 
         isPerformingTile = false
+        raiseFloatingWindows()
     }
 
     // MARK: - Private helpers
