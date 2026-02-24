@@ -235,8 +235,33 @@ final class Forest: World {
                     return (entity, fork)
                 }
             } else if fork.left.isInStack(ontoEntity) {
-                let stack = fork.left.stackData!
-                return attachStack(engine, stack, fork, newEntity, stackFromLeft: stackFromLeft)
+                if case .cursor = placeBy {
+                    // User dragged to a split zone — split alongside the stack
+                    let stackData = fork.left.stackData!
+                    if fork.right != nil {
+                        let area = fork.areaOfLeft(engine)
+                        let (subForkEntity, newFork) = createFork(
+                            left: fork.left, right: rightNode, area: area,
+                            workspace: fork.workspace, monitor: fork.monitor)
+                        fork.left = .fork(subForkEntity)
+                        parents.insert(subForkEntity, entity)
+                        let (l, r) = areaOfHalves(newFork)
+                        place(placeBy, newFork, l, r)
+                        for stackEntity in stackData.entities {
+                            onAttach(subForkEntity, stackEntity)
+                        }
+                        onAttach(subForkEntity, newEntity)
+                        return (entity, fork)
+                    } else {
+                        fork.right = rightNode
+                        fork.setRatio(fork.length() / 2)
+                        onAttach(entity, newEntity)
+                        return (entity, fork)
+                    }
+                } else {
+                    let stack = fork.left.stackData!
+                    return attachStack(engine, stack, fork, newEntity, stackFromLeft: stackFromLeft)
+                }
             }
 
             // Check right branch
@@ -254,8 +279,26 @@ final class Forest: World {
                     onAttach(forkEntity, newEntity)
                     return (entity, fork)
                 } else if rightBranch.isInStack(ontoEntity) {
-                    let stack = rightBranch.stackData!
-                    return attachStack(engine, stack, fork, newEntity, stackFromLeft: stackFromLeft)
+                    if case .cursor = placeBy {
+                        // User dragged to a split zone — split alongside the stack
+                        let stackData = rightBranch.stackData!
+                        let area = fork.areaOfRight(engine)
+                        let (subForkEntity, newFork) = createFork(
+                            left: rightBranch, right: rightNode, area: area,
+                            workspace: fork.workspace, monitor: fork.monitor)
+                        fork.right = .fork(subForkEntity)
+                        parents.insert(subForkEntity, entity)
+                        let (l, r) = areaOfHalves(newFork)
+                        place(placeBy, newFork, l, r)
+                        for stackEntity in stackData.entities {
+                            onAttach(subForkEntity, stackEntity)
+                        }
+                        onAttach(subForkEntity, newEntity)
+                        return (entity, fork)
+                    } else {
+                        let stack = rightBranch.stackData!
+                        return attachStack(engine, stack, fork, newEntity, stackFromLeft: stackFromLeft)
+                    }
                 }
             }
         }
