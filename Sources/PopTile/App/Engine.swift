@@ -447,11 +447,12 @@ final class Engine {
                abs(current.height - expected.height) <= tolerance {
                 return  // Window is still where we placed it — not a user drag
             }
-            // If the size changed, this is a resize (user dragging an edge),
-            // not a move — let onWindowResized handle it instead of starting a drag.
+            // If the size changed, this is a resize (user dragging an edge or
+            // app-initiated), not a move — let onWindowResized handle it.
+            // Don't update expectedRect here so onWindowResized can still
+            // compare against the original tiled position.
             if abs(current.width - expected.width) > tolerance ||
                abs(current.height - expected.height) > tolerance {
-                tileWin.expectedRect = current
                 return
             }
             // Update expectedRect to current position so resize detection still has
@@ -494,6 +495,16 @@ final class Engine {
             log(" onWindowResized SKIP \(tileWin.title()) — no expectedRect")
             return
         }
+
+        // App-initiated resize (no mouse button held) — e.g. terminal character
+        // grid snapping or adding a tab bar. Accept the new size without adjusting
+        // the fork ratio or re-arranging. Re-arranging would cause a feedback loop
+        // with apps that snap to grid sizes (terminal: 309 → 322 → 339 → ...).
+        guard NSEvent.pressedMouseButtons & 1 != 0 else {
+            tileWin.expectedRect = newRect
+            return
+        }
+
         let movement = calculateMovement(from: fromRect, change: newRect)
 
         if !movement.isEmpty && movement != .moved {

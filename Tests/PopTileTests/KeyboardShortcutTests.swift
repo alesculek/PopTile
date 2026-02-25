@@ -1037,4 +1037,55 @@ final class ResizeNotDragTests: XCTestCase {
         XCTAssertTrue(movement.contains(.shrink))
         XCTAssertTrue(movement.contains(.up))
     }
+
+    /// App-initiated resize (e.g. terminal adding a tab bar) should be
+    /// detected as a size change so onWindowMoved skips drag detection,
+    /// and onWindowResized accepts the new size without adjusting fork ratio
+    /// (no mouse held → just update expectedRect to avoid feedback loop).
+    func testAppInitiatedResizeIsNotUserResize() {
+        // Simulate iTerm adding a tab bar: position same, height shrinks slightly
+        let expected = Rect(x: 100, y: 100, width: 800, height: 600)
+        let afterTabBar = Rect(x: 100, y: 100, width: 800, height: 575)
+
+        // onWindowMoved guard: size changed → not a drag
+        XCTAssertTrue(isSizeChange(expected: expected, current: afterTabBar),
+                      "Tab bar resize must be caught as size change in onWindowMoved")
+
+        // calculateMovement sees a real change, but onWindowResized must NOT
+        // apply it when mouse is not pressed — just accept the new size.
+        let movement = calculateMovement(from: expected, change: afterTabBar)
+        XCTAssertFalse(movement.isEmpty,
+                       "Movement is detected but must be ignored without mouse press")
+        XCTAssertTrue(movement.contains(.shrink))
+    }
+
+    /// Terminal character grid snapping: PopTile sets 309px, terminal snaps to
+    /// 322px. Without the mouse-button guard, this creates a feedback loop
+    /// (309 → 322 → 339 → ... → off-screen).
+    func testTerminalGridSnapDoesNotCauseGrowthLoop() {
+        let tiledRect = Rect(x: 902, y: 361, width: 445, height: 309)
+        let snappedRect = Rect(x: 902, y: 361, width: 445, height: 322)
+
+        // This is detected as grow+down
+        let movement = calculateMovement(from: tiledRect, change: snappedRect)
+        XCTAssertTrue(movement.contains(.grow))
+        XCTAssertTrue(movement.contains(.down))
+
+        // onWindowMoved must see this as a size change → skip drag
+        XCTAssertTrue(isSizeChange(expected: tiledRect, current: snappedRect))
+
+        // onWindowResized must NOT adjust fork ratio without mouse press —
+        // just accept the 322px and update expectedRect. If it adjusted the
+        // ratio, the terminal would get a larger area, snap to 339px, and
+        // the cycle would repeat until the window goes off-screen.
+    }
+
+    func testAppInitiatedWidthResizeDetected() {
+        // App changes its own width (e.g. sidebar toggle)
+        let expected = Rect(x: 100, y: 100, width: 800, height: 600)
+        let afterSidebar = Rect(x: 100, y: 100, width: 750, height: 600)
+
+        XCTAssertTrue(isSizeChange(expected: expected, current: afterSidebar),
+                      "Width change from app must be caught as size change")
+    }
 }
